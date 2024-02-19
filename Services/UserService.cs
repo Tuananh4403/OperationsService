@@ -13,7 +13,7 @@ public interface IUserService
     IEnumerable<User> GetAll();
     User GetById(int id);
     void Register(RegisterRequest model);
-    void Update(int id, UpdateRequest model);
+    void UpdateRole(int id, UpdateRequest model);
     void Delete(int id);
 }
 
@@ -63,48 +63,32 @@ public class UserService : IUserService
         // validate
         if (_context.Users.Any(x => x.Email == model.Email))
             throw new AppException("Email '" + model.Email + "' is already taken");
-
-        // map model to new user object
         var user = _mapper.Map<User>(model);
 
         // hash password
         user.PasswordHash = BCrypt.HashPassword(model.Password);
-        Console.WriteLine("check");
-        var roleName = model.Roles;
-        var role = _context.Role.FirstOrDefault(r => r.Name == roleName);
-        if (role != null)
-        {
-            // Associate the role with the user
-            user.UserRoles.Add(new UserRole { RoleId = role.RoleId });
-        }
-        else
-        {
-            var newRole = new Role { Name = roleName , Title = roleName.Substring(0,2).ToUpper()};
-            Console.WriteLine("check");
-            // Add the new role to the context
-            _context.Role.Add(newRole);
-            Console.WriteLine("check");
-            // Associate the new role with the user
-            user.UserRoles.Add(new UserRole { Role = newRole });
-        }
-        // save user
-        Console.WriteLine("check");
         _context.Users.Add(user);
+        // user.UserRoles.Add(new UserRole { RoleId = role.RoleId });
         _context.SaveChanges();
     }
 
-    public void Update(int id, UpdateRequest model)
+    public void UpdateRole(int id, UpdateRequest model)
     {
         var user = getUser(id);
 
         // validate
-        if (model.Email != user.Email && _context.Users.Any(x => x.Email == model.Email))
-            throw new AppException("Username '" + model.Email + "' is already taken");
+        // if (model.Email != user.Email && _context.Users.Any(x => x.Email == model.Email))
+        //     throw new AppException("Username '" + model.Email + "' is already taken");
 
         // hash password if it was entered
-        if (!string.IsNullOrEmpty(model.Password))
-            user.PasswordHash = BCrypt.HashPassword(model.Password);
-
+        // if (!string.IsNullOrEmpty(model.Password))
+        //     user.PasswordHash = BCrypt.HashPassword(model.Password);
+        var existingRole = _context.Role.FirstOrDefault(r => r.Name == model.Role);
+        if (existingRole != null)
+        {
+            // If the role exists, associate it with the user
+            user.UserRoles.Add(new UserRole { RoleId = existingRole.RoleId });
+        }      
         // copy model to user and save
         _mapper.Map(model, user);
         _context.Users.Update(user);
